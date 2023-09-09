@@ -10,12 +10,10 @@ python -m venv ~/px4-venv
 # activate
 source ~/px4-venv/bin/activate
 ```
-
 ### Clone repository
 ```commandline
 git clone https://github.com/monemati/PX4-ROS2-Gazebo-YOLOv8.git
 ```
-
 ### Install PX4
 ```commandline
 cd ~
@@ -24,7 +22,6 @@ bash ./PX4-Autopilot/Tools/setup/ubuntu.sh
 cd PX4-Autopilot/
 make px4_sitl
 ```
-
 ### Install ROS 2
 ```commandline
 cd ~
@@ -43,7 +40,6 @@ sudo apt install ros-dev-tools
 source /opt/ros/humble/setup.bash && echo "source /opt/ros/humble/setup.bash" >> .bashrc
 pip install --user -U empy pyros-genmsg setuptools
 ```
-
 ### Setup Micro XRCE-DDS Agent & Client
 ```commandline
 cd ~
@@ -56,7 +52,6 @@ make
 sudo make install
 sudo ldconfig /usr/local/lib/
 ```
-
 ### Build ROS 2 Workspace
 ```commandline
 mkdir -p ~/ws_sensor_combined/src/
@@ -75,7 +70,6 @@ cd ..
 source /opt/ros/humble/setup.bash
 colcon build
 ```
-
 ### Install MAVSDK
 ```commandline
 pip install mavsdk
@@ -85,12 +79,10 @@ sudo apt install ros-humble-ros-gzgarden
 pip install numpy
 pip install opencv-python
 ```
-
 ### Install YOLO
 ```commandline
 pip install ultralytics
 ```
-
 ### Additional Configs
 - Put below lines in your bashrc:
 ```commandline
@@ -132,7 +124,7 @@ source ~/px4-venv/bin/activate
 cd ~/PX4-ROS2-Gazebo-YOLOv8
 python keyboard-mavsdk-test.py
 ```
-When you run the last command a blank window will open for reading inputs from keyboard. focus on that window by clicking on it, then hit "r" on keyboard to arm the drone and use WASD and Up-Down-Left-Right on the keyboard for flying the drone.
+When you run the last command a blank window will open for reading inputs from keyboard. focus on that window by clicking on it, then hit "r" on keyboard to arm the drone and use WASD and Up-Down-Left-Right on the keyboard for flying.
 
 ### Fly using ROS 2
 You need several terminals.
