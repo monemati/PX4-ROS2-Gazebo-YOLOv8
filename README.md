@@ -20,6 +20,13 @@ docker run --privileged -it --gpus all -e NVIDIA_DRIVER_CAPABILITIES=all -e NVID
 ```
 
 ## Installation
+### Python
+```
+sudo apt install python3
+sudo apt install python3-venv
+sudo apt update
+
+```
 ### Create a virtual environment
 ```commandline
 # create
@@ -56,7 +63,7 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install ros-humble-desktop
 sudo apt install ros-dev-tools
 source /opt/ros/humble/setup.bash && echo "source /opt/ros/humble/setup.bash" >> .bashrc
-pip install --user -U empy pyros-genmsg setuptools
+pip install --user -U "empy<4" pyros-genmsg "setuptools<59.0.0"
 ```
 ### Setup Micro XRCE-DDS Agent & Client
 ```commandline
@@ -94,7 +101,7 @@ pip install mavsdk
 pip install aioconsole
 pip install pygame
 sudo apt install ros-humble-ros-gzgarden
-pip install numpy
+pip install "numpy<2.0.0"
 pip install opencv-python
 ```
 ### Install YOLO
@@ -142,7 +149,9 @@ source ~/px4-venv/bin/activate
 cd ~/PX4-ROS2-Gazebo-YOLOv8
 python keyboard-mavsdk-test.py
 ```
-When you run the last command a blank window will open for reading inputs from keyboard. focus on that window by clicking on it, then hit "r" on keyboard to arm the drone, and use WASD and Up-Down-Left-Right on the keyboard for flying, and use "l" for landing.
+- **r** → Arm (Ready to arm)
+- **l** → Landing
+- **WASD** and **Arrow Keys** → Movement
 
 ### Fly using ROS 2
 You need several terminals.
