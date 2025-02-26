@@ -5,7 +5,19 @@ Aerial Object Detection using a Drone with PX4 Autopilot and ROS 2. PX4 SITL and
 https://github.com/monemati/PX4-ROS2-Gazebo-YOLOv8/assets/58460889/fab19f49-0be6-43ea-a4e4-8e9bc8d59af9
 
 ## Docker
-- I've provided a Dockerfile, already tested with the latest version of PX4-Autopilot (v1.15.0).
+- You can pull the already built image by me or use the provided Dockerfile.
+```commandline
+# Pull
+docker pull monemati/px4_ros2_gazebo_yolov8
+
+# Run
+XAUTH=/tmp/.docker.xauth
+touch $XAUTH
+xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
+docker run --privileged -it --gpus all -e NVIDIA_DRIVER_CAPABILITIES=all -e NVIDIA_VISIBLE_DEVICES=all --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --env="XAUTHORITY=$XAUTH" --volume="$XAUTH:$XAUTH" --network=host --ipc=host --shm-size=2gb --env="DISPLAY=$DISPLAY" --env="QT_X11_NO_MITSHM=1" --rm --name px4_ros2_gazebo_yolov8_container monemati/px4_ros2_gazebo_yolov8
+```
+
+- You can build custom docker image using the provided Dockerfile, already tested with the v1.15.0 version of PX4-Autopilot.
 ```commandline
 # Build
 git clone https://github.com/monemati/PX4-ROS2-Gazebo-YOLOv8.git
@@ -19,7 +31,7 @@ xauth nlist $DISPLAY | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
 docker run --privileged -it --gpus all -e NVIDIA_DRIVER_CAPABILITIES=all -e NVIDIA_VISIBLE_DEVICES=all --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" --env="XAUTHORITY=$XAUTH" --volume="$XAUTH:$XAUTH" --network=host --ipc=host --shm-size=2gb --env="DISPLAY=$DISPLAY" --env="QT_X11_NO_MITSHM=1" --rm --name px4_ros2_gazebo_yolov8_container px4_ros2_gazebo_yolov8_image
 ```
 
-## Installation
+## Manual Installation
 ### Create a virtual environment
 ```commandline
 # create
