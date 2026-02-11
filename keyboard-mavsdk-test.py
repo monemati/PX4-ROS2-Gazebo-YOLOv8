@@ -2,12 +2,13 @@ import asyncio
 import subprocess
 import sys
 from mavsdk import System
+from pymavlink import mavutil
 import KeyPressModule as kp
 
 kp.init()
 drone = System()
 
-roll, pitch, throttle, yaw = 0, 0, 0.5, 0
+roll, pitch, throttle, yaw = 0, 0, 0, 0
 is_connected = False
 
 # Gimbal state
@@ -19,10 +20,46 @@ GIMBAL_PITCH_MAX = 0.5
 GIMBAL_YAW_MIN = -1.57
 GIMBAL_YAW_MAX = 1.57
 
+# ArduCopter flight mode mapping (key -> mode name)
+ARDUPILOT_MODES = {
+    '1': 'LOITER',
+    '2': 'ALT_HOLD',
+    '3': 'GUIDED',
+    '4': 'STABILIZE',
+    '5': 'LAND',
+}
+
+# pymavlink connection for mode changes (separate MAVLink stream)
+_mav_conn = None
+
 
 def log(msg):
     sys.stdout.write(f"{msg}\r\n")
     sys.stdout.flush()
+
+
+def get_mav_connection():
+    """Get or create pymavlink connection for flight mode changes."""
+    global _mav_conn
+    if _mav_conn is None:
+        _mav_conn = mavutil.mavlink_connection('udpin:0.0.0.0:14560')
+        _mav_conn.wait_heartbeat(timeout=10)
+        log("-- pymavlink connected for mode switching")
+    return _mav_conn
+
+
+def set_flight_mode(mode_name):
+    """Set ArduCopter flight mode via pymavlink."""
+    try:
+        conn = get_mav_connection()
+        if mode_name not in conn.mode_mapping():
+            log(f"-- Unknown mode: {mode_name}")
+            return
+        mode_id = conn.mode_mapping()[mode_name]
+        conn.set_mode(mode_id)
+        log(f"-- Mode: {mode_name}")
+    except Exception as e:
+        log(f"-- Mode change failed: {e}")
 
 
 _gimbal_procs = {}
@@ -55,9 +92,9 @@ async def getKeyboardInput(my_drone):
         elif kp.getKey("DOWN"):
             roll = -value
         if kp.getKey("w"):
-            throttle = 1
+            throttle = 0.8
         elif kp.getKey("s"):
-            throttle = 0
+            throttle = 0.2
         if kp.getKey("a"):
             yaw = -value
         elif kp.getKey("d"):
@@ -91,6 +128,12 @@ async def getKeyboardInput(my_drone):
             gimbal_yaw = min(GIMBAL_YAW_MAX, gimbal_yaw + GIMBAL_STEP)
             set_gimbal('/gimbal/cmd_yaw', gimbal_yaw)
 
+        # Flight mode switching (ArduCopter)
+        for key, mode in ARDUPILOT_MODES.items():
+            if kp.getKey(key):
+                set_flight_mode(mode)
+                break
+
         await asyncio.sleep(0.1)
 
 
@@ -109,7 +152,7 @@ async def manual_control_drone(my_drone):
 async def run_drone():
     global is_connected
     asyncio.ensure_future(getKeyboardInput(drone))
-    await drone.connect(system_address="udp://:14540")
+    await drone.connect(system_address="udpin://0.0.0.0:14550")
     log("Waiting for drone to connect...")
     async for state in drone.core.connection_state():
         if state.is_connected:
@@ -120,6 +163,13 @@ async def run_drone():
             log("-- Global position state is good enough for flying.")
             break
     is_connected = True
+
+    # Send initial manual control inputs before arming (ArduCopter requirement)
+    log("-- Sending initial manual control inputs...")
+    for _ in range(20):
+        await drone.manual_control.set_manual_control_input(0, 0, 0, 0)
+        await asyncio.sleep(0.05)
+
     log("-- Ready! Press 'r' to arm the drone.")
     asyncio.ensure_future(manual_control_drone(drone))
 

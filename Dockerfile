@@ -9,6 +9,12 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     python3-colcon-common-extensions \
+    python3-dev \
+    python3-setuptools \
+    python3-lxml \
+    python3-matplotlib \
+    python3-pyparsing \
+    python3-pexpect \
     clang \
     lldb \
     ninja-build \
@@ -20,6 +26,7 @@ RUN apt-get update && apt-get install -y \
     libgstreamer-plugins-base1.0-dev \
     gstreamer1.0-plugins-good \
     gstreamer1.0-tools \
+    rapidjson-dev \
     sudo \
     wget \
     curl \
@@ -27,48 +34,50 @@ RUN apt-get update && apt-get install -y \
     ruby \
     tmuxinator
 
-# Install PX4
+# Add Gazebo Garden repository and install Gazebo + ROS-GZ bridge
+RUN wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null && \
+    apt-get update && apt-get install -y \
+    libgz-sim7-dev \
+    ros-humble-ros-gzgarden
+
+# Install ArduPilot prerequisites (the install-prereqs script refuses root, so install manually)
+RUN apt-get update && apt-get install -y \
+    python3-future \
+    python3-serial \
+    python3-wxgtk4.0 \
+    python3-opencv \
+    python3-empy \
+    python3-yaml \
+    ccache \
+    gawk && \
+    pip3 install MAVProxy pymavlink future lxml
+
+# Clone and build ArduPilot
 RUN cd /root && \
-    git clone https://github.com/PX4/PX4-Autopilot.git --recursive && \
-    bash ./PX4-Autopilot/Tools/setup/ubuntu.sh && \
-    cd PX4-Autopilot && \
-    make px4_sitl
+    git clone --recurse-submodules https://github.com/ArduPilot/ardupilot.git && \
+    cd ardupilot && \
+    ./waf configure --board sitl && \
+    ./waf copter
 
-# Setup Micro XRCE-DDS Agent & Client
+# Build ardupilot_gazebo plugin (GZ_VERSION=garden for gz-sim7)
+ENV GZ_VERSION=garden
 RUN cd /root && \
-    git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git && \
-    cd Micro-XRCE-DDS-Agent && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make && \
-    make install && \
-    ldconfig /usr/local/lib/
-
-# Build ROS 2 Workspace ws_sensor_combined
-RUN mkdir -p /root/ws_sensor_combined/src && \
-    cd /root/ws_sensor_combined/src && \
-    git clone https://github.com/PX4/px4_msgs.git && \
-    git clone https://github.com/PX4/px4_ros_com.git && \
-    /bin/bash -c "source /opt/ros/humble/setup.bash && cd /root/ws_sensor_combined && colcon build"
-
-# Build ROS 2 Workspace ws_offboard_control
-RUN mkdir -p /root/ws_offboard_control/src && \
-    cd /root/ws_offboard_control/src && \
-    git clone https://github.com/PX4/px4_msgs.git && \
-    git clone https://github.com/PX4/px4_ros_com.git && \
-    /bin/bash -c "source /opt/ros/humble/setup.bash && cd /root/ws_offboard_control && colcon build"
+    git clone https://github.com/ArduPilot/ardupilot_gazebo.git && \
+    cd ardupilot_gazebo && \
+    mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+    make -j$(nproc)
 
 # Install Python requirements. If you don't have gpu, uncomment next line -torch cpu installation-
 # RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip3 install \
     mavsdk \
+    pymavlink \
     aioconsole \
     pygame \
     opencv-python \
     ultralytics
-
-RUN apt-get install -y ros-humble-ros-gzgarden
 
 # Related to mismatch between numpy 2.x and numpy 1.x
 RUN pip3 uninstall -y numpy
@@ -78,21 +87,21 @@ RUN mkdir -p /root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/
 COPY . /root/PX4-ROS2-Gazebo-YOLOv8
 COPY models/. /root/.gz/models/
 COPY models_docker/. /root/.gz/fuel/fuel.ignitionrobotics.org/openrobotics/models/
-COPY worlds/default_docker.sdf /root/PX4-Autopilot/Tools/simulation/gz/worlds/default.sdf
 
-# Setup gimbal joints for camera control
-RUN python3 /root/PX4-ROS2-Gazebo-YOLOv8/setup_gimbal.py
+# Copy ArduPilot world
+COPY worlds/ardupilot_default.sdf /root/ardupilot_gazebo/worlds/ardupilot_default.sdf
 
-# Additional Configs
-RUN echo "source /root/ws_sensor_combined/install/setup.bash" >> /root/.bashrc && \
-    echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "export GZ_SIM_RESOURCE_PATH=/root/.gz/models" >> /root/.bashrc
+# Configure gimbal camera (add explicit topic, remove unavailable plugins)
+RUN python3 /root/PX4-ROS2-Gazebo-YOLOv8/setup_gimbal_ardupilot.py
+
+# Environment configuration
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
+    echo "export GZ_SIM_RESOURCE_PATH=/root/.gz/models:/root/ardupilot_gazebo/models:/root/ardupilot_gazebo/worlds" >> /root/.bashrc && \
+    echo "export GZ_SIM_SYSTEM_PLUGIN_PATH=/root/ardupilot_gazebo/build" >> /root/.bashrc && \
+    echo "export PATH=\$PATH:/root/ardupilot/Tools/autotest:/root/.local/bin" >> /root/.bashrc
 
 # Copy tmuxinator configuration
-COPY px4_ros2_gazebo.yml /root/.config/tmuxinator/px4_ros2_gazebo.yml
-
-# Set up tmuxinator
-RUN echo "export PATH=\$PATH:/root/.local/bin" >> /root/.bashrc
+COPY ardupilot_ros2_gazebo.yml /root/.config/tmuxinator/ardupilot_ros2_gazebo.yml
 
 # Set default command to start tmuxinator
-CMD ["tmuxinator", "start", "px4_ros2_gazebo"]
+CMD ["tmuxinator", "start", "ardupilot_ros2_gazebo"]

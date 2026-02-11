@@ -1,0 +1,33 @@
+# ~/.config/tmuxinator/ardupilot_ros2_gazebo.yml
+name: ardupilot_ros2_gazebo
+root: /root
+
+windows:
+  - simulation:
+      layout: tiled
+      panes:
+        - >-
+          export GZ_SIM_SYSTEM_PLUGIN_PATH=/root/ardupilot_gazebo/build &&
+          export GZ_SIM_RESOURCE_PATH=/root/.gz/models:/root/ardupilot_gazebo/models:/root/ardupilot_gazebo/worlds &&
+          gz sim -r /root/ardupilot_gazebo/worlds/ardupilot_default.sdf
+        - >-
+          sleep 8 &&
+          cd /root/ardupilot &&
+          Tools/autotest/sim_vehicle.py
+          -v ArduCopter
+          -f gazebo-iris
+          --model JSON
+          --console
+          --wipe-eeprom
+          --add-param-file /root/PX4-ROS2-Gazebo-YOLOv8/ardupilot_sitl.parm
+          --out=udp:127.0.0.1:14550
+          --out=udp:127.0.0.1:14560
+          -l 47.397971,8.546164,0,0
+        - >-
+          sleep 15 &&
+          ros2 run ros_gz_bridge parameter_bridge
+          /drone/camera@sensor_msgs/msg/Image[gz.msgs.Image
+          --ros-args -r /drone/camera:=/camera
+        - sleep 18 && cd /root/PX4-ROS2-Gazebo-YOLOv8 && python3 uav_camera_det.py
+        - sleep 15 && cd /root/PX4-ROS2-Gazebo-YOLOv8 && python3 move_car.py
+        - sleep 12 && cd /root/PX4-ROS2-Gazebo-YOLOv8 && python3 keyboard-mavsdk-test.py

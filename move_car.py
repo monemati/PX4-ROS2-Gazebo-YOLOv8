@@ -15,11 +15,18 @@ OMEGA = SPEED / RADIUS  # angular velocity (rad/s)
 
 MODEL_NAME = "hatchback_blue_1"
 WORLD_NAME = "default"
-UPDATE_HZ = 10
+UPDATE_HZ = 20
+
+_car_proc = None
 
 
 def set_pose(x, y, z, yaw):
-    """Set model pose via gz service."""
+    """Set model pose via gz service (non-blocking)."""
+    global _car_proc
+    # Skip if previous call still running
+    if _car_proc is not None and _car_proc.poll() is None:
+        return
+
     qz = math.sin(yaw / 2)
     qw = math.cos(yaw / 2)
 
@@ -29,11 +36,11 @@ def set_pose(x, y, z, yaw):
         f'orientation: {{x: 0, y: 0, z: {qz:.6f}, w: {qw:.6f}}}'
     )
 
-    subprocess.run(
+    _car_proc = subprocess.Popen(
         ['gz', 'service', '-s', f'/world/{WORLD_NAME}/set_pose',
          '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-         '--timeout', '100', '--req', req],
-        capture_output=True
+         '--timeout', '2000', '--req', req],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
 

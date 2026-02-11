@@ -1,0 +1,14 @@
+# ArduCopter SITL parameters for Gazebo simulation
+#
+# Physics rate: 250Hz (max_step_size=0.004) chosen for real-time
+# performance with our scene (racetrack + vehicles + camera).
+# On faster hardware, reduce max_step_size and raise SCHED_LOOP_RATE.
+#
+# Pre-arm math at 250Hz physics:
+#   Gyro check:  250Hz >= SCHED_LOOP_RATE * 1.8 = 225Hz  (pass)
+#   Loop check:  250Hz >= SCHED_LOOP_RATE * 0.9 = 112Hz  (pass)
+SCHED_LOOP_RATE 125
+# Skip gyro calibration on boot (not needed in simulation)
+INS_GYR_CAL 0
+# Disable fence to avoid geofence pre-arm failures in SITL
+FENCE_ENABLE 0
