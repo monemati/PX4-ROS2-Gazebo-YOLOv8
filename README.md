@@ -175,6 +175,12 @@ source /opt/ros/humble/setup.bash
 colcon build
 ```
 ### Install MAVSDK
+> **Note:** Some users have reported installation conflicts when installing
+> `ros-humble-ros-gzgarden` on a fresh setup (see issue #30 and the related
+> upstream bug gazebosim/ros_gz#755). If you run into this, the recommended
+> workaround is to use the prebuilt Docker image (see the Docker section above)
+> until the upstream issue is resolved.
+
 ```commandline
 pip install mavsdk
 pip install aioconsole
