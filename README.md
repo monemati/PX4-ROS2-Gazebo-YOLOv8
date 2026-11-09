@@ -157,19 +157,22 @@ sudo make install
 sudo ldconfig /usr/local/lib/
 ```
 ### Build ROS 2 Workspace
+`px4_ros_com` is not kept in sync with every `px4_msgs` release, so clone both from
+the same branch. Mixed branches fail at `colcon build` with
+`px4_msgs/msg/sensor_gps.hpp: No such file or directory` (see #42).
 ```commandline
 mkdir -p ~/ws_sensor_combined/src/
 cd ~/ws_sensor_combined/src/
-git clone https://github.com/PX4/px4_msgs.git
-git clone https://github.com/PX4/px4_ros_com.git
+git clone -b release/1.15 https://github.com/PX4/px4_msgs.git
+git clone -b release/1.15 https://github.com/PX4/px4_ros_com.git
 cd ..
 source /opt/ros/humble/setup.bash
 colcon build
 
 mkdir -p ~/ws_offboard_control/src/
 cd ~/ws_offboard_control/src/
-git clone https://github.com/PX4/px4_msgs.git
-git clone https://github.com/PX4/px4_ros_com.git
+git clone -b release/1.15 https://github.com/PX4/px4_msgs.git
+git clone -b release/1.15 https://github.com/PX4/px4_ros_com.git
 cd ..
 source /opt/ros/humble/setup.bash
 colcon build
